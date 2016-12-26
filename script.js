@@ -3,9 +3,11 @@ const websocket = new WebSocket('ws://localhost:9000/~michael/dokuwiki/lib/plugi
 websocket.onopen = function (evt) {
     console.log('open');
     console.dir(evt);
+    websocket.send('testmessage');
+    websocket.close();
 };
 websocket.onclose = function (evt) {
-    //console.log('close');
+    console.log('close');
     //console.dir(evt);
 };
 websocket.onmessage = function (evt) {
@@ -16,6 +18,4 @@ websocket.onerror = function (evt) {
     console.log('error');
     console.dir(evt);
 };
-websocket.send('testmessage');
-websocket.close();
 console.log('jsdone');

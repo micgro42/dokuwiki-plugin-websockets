@@ -2,44 +2,32 @@
 
 error_reporting(E_ALL);
 
-$master = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-// $master = stream_socket_server('cp://localhost:9000');
-$sockets = array($master);
-socket_set_option($master, SOL_SOCKET, SO_REUSEADDR, 1);
-socket_bind($master, 'localhost',9000);
-socket_listen($master);
+//$master = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+$master = stream_socket_server('tcp://localhost:9000');
 echo "Server Started : ".date('Y-m-d H:i:s')."\n";
 echo "Master master  : ".$master."\n";
+$allSockets = array($master);
+$streamsWrite = array();
+$streamsExcept = array();
 while (true) {
-    $changed = $sockets;
-    socket_select($changed, $write, $except,NULL);
-    foreach($changed as $socket) {
+    $changedSockets = $allSockets;
+    stream_select($changedSockets, $streamsWrite, $streamsExcept, null);
+    foreach ($changedSockets as $socket) {
         if ($socket == $master) {
-            //$client = stream_socket_accept($master);
-            $client = socket_accept($master);
-            if ($client<0) {
+            $client = stream_socket_accept($master);
+            if (!$client) {
                 echo "socket_accept() failed";
                 continue;
             } else {
                 $sockets[] = $client;
                 echo 'client ' . $client . " Connected!\n";
-                $header = socket_read($client, 1024);
-                var_dump($header);
+                $header = fread($client, 1024);
                 $handshake = getHandshake($header);
-                var_dump($handshake);
-                $bytesWritten = socket_write($client, $handshake);
-                //$bytesWritten = writeBuffer($client, $handshake);
-                var_dump($bytesWritten);
-                //                var_dump(socket_last_error($client));
+                $bytesWritten = writeBuffer($client, $handshake);
             }
-        } else {
-            $bytes = socket_recv($socket, $buffer, 2040, 0);
-            var_dump($bytes);
-            var_dump($buffer);
         }
     }
 }
-
 
 function getHandshake($header) {
     $lines = explode("\n", $header);
@@ -62,6 +50,7 @@ function getHandshake($header) {
     return $response;
 }
 
+// found in nekudo/php-websocket
 function writeBuffer($resource, $string) {
     $stringLength = strlen($string);
     for($written = 0; $written < $stringLength; $written += $fwrite) {
