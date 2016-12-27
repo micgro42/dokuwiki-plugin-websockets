@@ -1,0 +1,7 @@
+base   websockets
+author Michael Große
+email  mic.grosse@posteo.de
+date   2016-12-28
+name   websockets plugin
+desc   Provides websocket-infrastructure for other plugins to use
+url    https://dokuwiki.org/plugin:websockets
