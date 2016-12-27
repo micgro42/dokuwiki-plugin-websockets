@@ -45,9 +45,12 @@ class Server {
                     } catch (\Exception $e) {
                         var_dump($e);
                     }
-                    var_dump($data);
                     // todo: do some user authentication
                     trigger_event('WEBSOCKET_DATA_RECEIVED', $data); // json decode first!
+                    $encodedData = $this->encodeDataFrame('{"msg":"testmessage2"}', 'text', false);
+                    if (!$this->writeBuffer($socket, $encodedData)) {
+                        throw new \Exception('write to socket failed!');
+                    }
                 }
             }
         }
@@ -90,6 +93,74 @@ class Server {
     }
 
     /**
+     * 
+     */
+    protected function encodeDataFrame($data, $type = 'text', $maskIt = true) {
+        $frameHeader = '';
+        $fin = 1; // we currently do not support fragmented messages.
+        $RSV1 = 0;
+        $RSV2 = 0;
+        $RSV3 = 0;
+        switch ($type) {
+        case 'continuation':
+            $opcode = '0000';
+            throw new \Exception('Sending of continuation frames is not yet supported!');
+            break;
+        case 'text':
+            $opcode = '0001';
+            break;
+        case 'binary':
+            $opcode = '0010';
+            break;
+        case 'close':
+            $opcode = '1000';
+            break;
+        case 'ping':
+            $opcode = '1001';
+            throw new \Exception('Sending of pings is not yet supported!');
+            break;
+        case 'pong':
+            $opcode = '1010';
+            break;
+        default:
+            throw new \Exception('Unknown frame type ' . $type);
+        }
+
+        $firstByteBinary = $fin . $RSV1 . $RSV2 . $RSV3 . $opcode;
+        $frameHeader .= chr(bindec($firstByteBinary));
+        $maskBit = $maskIt ? '1' : '0';
+        $payloadLength = strlen($data);
+        $payloadBytes = '';
+        // @todo: handle payload of length 0
+        if ($payloadLength < 126) {
+            $secondByteBinary = $maskBit . sprintf('%07b', $payloadLength);
+        } elseif ($payloadLength < 65536) {
+            $secondByteBinary = $maskBit . sprintf('%07b', 126);
+            $payloadBytes = sprintf('%016b', $payloadLength);
+        } else {
+            $secondByteBinary = $maskBit . sprintf('%07b', 127);
+            $payloadBytes = sprintf('%064b', $payloadLength);
+        }
+        $frameHeader .= chr(bindec($secondByteBinary));
+        $frameHeader .= join('', array_map('chr', array_map('bindec', array_filter(str_split($payloadBytes,8)))));
+        if ($maskIt) {
+            $mask = openssl_random_pseudo_bytes(4, $crypto_strong);
+            $frameHeader .= $mask;
+            if (!$crypto_strong) {
+                throw new \Exception('Your system is broken and does not support strong crypto algorithms!');
+            }
+            $maskedPayload = '';
+            for ($i = 0; $i < $payloadLength; $i += 1) {
+                $maskedPayload .= $data[$i] ^ $mask[$i % 4];
+            }
+            $frame = $frameHeader . $maskedPayload;
+        } else {
+            $frame = $frameHeader . $data;
+        }
+        return $frame;
+    }
+
+    /**
      * this method is based on https://tools.ietf.org/html/rfc6455#section-5.2
      */
     protected function decodeDataFrame($data) {
@@ -107,26 +178,26 @@ class Server {
         $opcode = bindec(substr($firstByteBinary, 4));
         $frametype;
         switch ($opcode) {
-            case 0:
-                $frametype = 'continuation';
-                break;
-            case 1:
-                $frametype = 'text';
-                break;
-            case 2:
-                $frametype = 'binary';
-                break;
-            case 8:
-                $frametype = 'close';
-                break;
-            case 9:
-                $frametype = 'ping';
-                break;
-            case 10:
-                $frametype = 'pong';
-                break;
-            default:
-                throw new \Exception('unknown opcode: ' . $opcode);
+        case 0:
+            $frametype = 'continuation';
+            break;
+        case 1:
+            $frametype = 'text';
+            break;
+        case 2:
+            $frametype = 'binary';
+            break;
+        case 8:
+            $frametype = 'close';
+            break;
+        case 9:
+            $frametype = 'ping';
+            break;
+        case 10:
+            $frametype = 'pong';
+            break;
+        default:
+            throw new \Exception('unknown opcode: ' . $opcode);
         }
 
         // @todo: handle fragmentation https://tools.ietf.org/html/rfc6455#section-5.4

@@ -12,6 +12,8 @@ websocket.onclose = function (evt) {
 websocket.onmessage = function (evt) {
     console.log('message');
     console.dir(evt);
+    console.log(evt.data);
+    console.log(evt.data.length);
 };
 websocket.onerror = function (evt) {
     console.log('error');
