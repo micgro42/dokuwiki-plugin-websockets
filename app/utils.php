@@ -6,7 +6,7 @@ class utils {
 
     public function getHandshakeResponse($header) {
         $lines = array_filter(explode("\r\n", $header));
-        list($method, , $protocol) = explode(' ', array_shift($lines));
+        list($method, $endpoint, $protocol) = explode(' ', array_shift($lines));
         if ($method != 'GET') {
             throw new \Exception('Method not allowed: ' . $method);
         }
@@ -24,6 +24,37 @@ class utils {
 
         if (!isset($headers['Upgrade']) || strpos($headers['Upgrade'], 'websocket') === false) {
             throw new \Exception('Upgrade field missing or invalid!');
+        }
+        if (isset($headers['Cookie'])) {
+            $cookies = explode('; ', $headers['Cookie']);
+            // split the cookies into name => payload
+            $cookies = array_reduce($cookies, function($cookieArray, $cookie) {
+                list($cookieName, $cookiePayload) = explode('=', $cookie);
+                $cookieArray[$cookieName] = urldecode($cookiePayload);
+                return $cookieArray;
+            }, array());
+
+            $sessionid = $cookies['DokuWiki'];
+            print_r('$sessionid: ' . $sessionid . "\n");
+            global $conf;
+            $authCookieKey = 'DW'.md5($endpoint.(($conf['securecookie'])?80:''));
+            if (isset($cookies[$authCookieKey])) {
+                list($user, $sticky, $pass) = explode('|', $cookies[$authCookieKey], 3);
+                $sticky = (bool) $sticky;
+                $user   = base64_decode($user);
+                $cacheFN = getCacheName('__websockets_'. $user . $sessionid);
+
+                print_r('auth file exists: ' . file_exists($cacheFN) . "\n");
+                var_dump(file_get_contents($cacheFN));
+                var_dump($pass);
+                /*
+                $pass   = base64_decode($pass);
+                $secret = auth_cookiesalt(!$sticky, true); //bind non-sticky to session
+                $pass   = auth_decrypt($pass, $secret);
+                var_dump(auth_login($user, $pass, false, true));
+                print_r("$user $pass $sticky \n");
+                */
+            }
         }
 
         // @todo check Connection field etc. and make more validity checks
