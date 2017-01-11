@@ -257,4 +257,22 @@ class utils {
         $GLOBAL_WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         return base64_encode(pack('H*',sha1($secret . $GLOBAL_WEBSOCKET_GUID)));
     }
+
+
+
+    public function getSecret($timestamp, $createIfNotExists = false) {
+        $cacheFN = getCacheName('__websockets_'.$timestamp);
+        if (file_exists($cacheFN)) {
+            return file_get_contents($cacheFN);
+        }
+        if ($createIfNotExists) {
+            $secret = base64_encode(openssl_random_pseudo_bytes(16, $crypto_strong));
+            if (!$crypto_strong) {
+                msg('Your system has only weak crypto support. Please deactivate the websockets plugin!',-1,'','',MSG_ADMINS_ONLY);
+            }
+            file_put_contents($cacheFN, $secret);
+            return $secret;
+        }
+        return false;
+    }
 }
