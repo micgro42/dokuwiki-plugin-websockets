@@ -57,6 +57,20 @@ class Server {
         }
     }
 
+
+    /**
+     *
+     * @todo we probabely also shouldn't call writeBuffer here directly but call a send method on Connection
+     * @todo this should receive unencoded data and handle encoding by itself.
+     *
+     * @param string $payload
+     */
+    public function writeDataToAllClients($payload) {
+        foreach ($this->clients as $connection) {
+           $this->writeBuffer($connection->getSocket(), $payload);
+        }
+    }
+
     // found in nekudo/php-websocket
     public function writeBuffer($resource, $string) {
         $stringLength = strlen($string);
