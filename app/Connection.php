@@ -30,8 +30,21 @@ class Connection {
     protected function handle($buffer) {
         $utils = new utils();
         //try {
-        $data = $utils->decodeDataFrame($buffer);
+        $json = $utils->decodeDataFrame($buffer);
+        $data = json_decode($json, true);
         var_dump($data);
+        if (isset($data['secret']) && !empty($data['secret'])) {
+            if ($utils->getSecret($data['timestamp']) === $data['secret']) {
+                // data from server -> send to all (web) clients
+                $payload = array(
+                    'call' => $data['call'],
+                    'data' => $data['data'],
+                );
+                $dataframe = $utils->encodeDataFrame(json_encode($payload), 'text', false);
+                $this->server->writeDataToAllClients($dataframe);
+                return;
+            }
+        }
         //} catch (\Exception $e) {
         // var_dump($e);
         //}
