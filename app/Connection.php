@@ -39,4 +39,11 @@ class Connection {
         trigger_event('WEBSOCKET_DATA_RECEIVED', $data); // json decode first!
 
     }
+
+    /**
+     * @return resource
+     */
+    public function getSocket() {
+        return $this->socket;
+    }
 }
