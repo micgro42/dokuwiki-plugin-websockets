@@ -31,7 +31,7 @@ class action_plugin_websockets_auth extends DokuWiki_Action_Plugin {
      *                           handler was registered]
      * @return void
      */
-    public function handle_auth_login_check(Doku_Event &$event, $param) {
+    public function handle_auth_login_check(Doku_Event $event, $param) {
         $session_id = session_id();
         list($user, , $pass) = auth_getCookie();
         $pass = base64_encode($pass);
