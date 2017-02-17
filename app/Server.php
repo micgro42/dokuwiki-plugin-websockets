@@ -67,7 +67,14 @@ class Server {
      */
     public function writeDataToAllClients($payload) {
         foreach ($this->clients as $connection) {
-           $this->writeBuffer($connection->getSocket(), $payload);
+            if (!$connection->isWritable()) {
+                continue;
+            }
+            $bytesWritten = $this->writeBuffer($connection->getSocket(), $payload);
+            if (!$bytesWritten) {
+                $user = $connection->getUser();
+                print_r("$user: failed to write: \n$string\n");
+            }
         }
     }
 
