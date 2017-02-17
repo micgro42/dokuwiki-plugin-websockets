@@ -5,22 +5,7 @@ namespace dokuwiki\plugin\websockets\app;
 class utils {
 
     public function getHandshakeResponse($header) {
-        $lines = array_filter(explode("\r\n", $header));
-        list($method, $endpoint, $protocol) = explode(' ', array_shift($lines));
-        if ($method != 'GET') {
-            throw new \Exception('Method not allowed: ' . $method);
-        }
-        if (substr($protocol, 0, 4) != 'HTTP' || floatval(substr($protocol, 5)) < 1.1) {
-            throw new \Exception('Protocol invalid: ' . $protocol);
-        }
-        $headers = array();
-        foreach ($lines as $line) {
-            if (trim($line) == "") {
-                continue;
-            }
-            list($key, $value) = explode(': ', trim($line));
-            $headers[$key] = $value;
-        }
+        list($endpoint, $headers) = $this->parseHeaderToArray($header);
 
         if (!isset($headers['Upgrade']) || strpos($headers['Upgrade'], 'websocket') === false) {
             throw new \Exception('Upgrade field missing or invalid!');
@@ -274,5 +259,35 @@ class utils {
             return $secret;
         }
         return false;
+    }
+
+    /**
+     * @param $header
+     * @return array
+     * @throws \Exception
+     */
+    public function parseHeaderToArray($header) {
+        $lines = array_filter(explode("\r\n", $header));
+        list($method, $endpoint, $protocol) = explode(' ', array_shift($lines));
+        if ($method !== 'GET') {
+            throw new \Exception('Method not allowed: ' . $method);
+        }
+        if (substr($protocol, 0, 4) !== 'HTTP' || ((float)substr($protocol, 5)) < 1.1) {
+            throw new \Exception('Protocol invalid: ' . $protocol);
+        }
+        $headers = array();
+        foreach ($lines as $line) {
+            if (trim($line) == "") {
+                continue;
+            }
+            if (strpos($line, ':') === false) {
+                var_dump($header);
+                var_dump($line);
+                continue;
+            }
+            list($key, $value) = explode(': ', trim($line));
+            $headers[$key] = $value;
+        }
+        return array($endpoint, $headers);
     }
 }
