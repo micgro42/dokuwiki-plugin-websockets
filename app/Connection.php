@@ -6,6 +6,9 @@ class Connection {
     protected $hasHandshake = false;
     protected $server;
     protected $socket;
+    protected $user;
+    protected $animal;
+    protected $writable = false;
 
     public function __construct($server, $socket) {
         $this->server = $server;
@@ -14,9 +17,53 @@ class Connection {
 
     public function handleData($data) {
         if ($this->hasHandshake) {
-            return $this->handle($data);
+            $this->handle($data);
+            return;
         }
-        return $this->performHandshake($data);
+        $this->performHandshake($data);
+        $this->setUserData($data);
+    }
+
+    protected function setUserData($header) {
+        $utils = new utils();
+        list($endpoint, $headers) = $utils->parseHeaderToArray($header);
+
+        if (true && isset($headers['Cookie'])) {  // FIXME implement authentication
+            $cookies = explode('; ', $headers['Cookie']);
+            // split the cookies into name => payload
+            $cookies = array_reduce($cookies, function($cookieArray, $cookie) {
+                list($cookieName, $cookiePayload) = explode('=', $cookie);
+                $cookieArray[$cookieName] = urldecode($cookiePayload);
+                return $cookieArray;
+            }, array());
+
+            $sessionid = $cookies['DokuWiki'];
+            print_r('$sessionid: ' . $sessionid . "\n");
+            global $conf;
+            $authCookieKey = 'DW'.md5($endpoint.(($conf['securecookie'])?80:''));
+            if (isset($cookies[$authCookieKey])) {
+                list($user, $sticky, $pass) = explode('|', $cookies[$authCookieKey], 3);
+                $sticky = (bool) $sticky;
+                $user   = base64_decode($user);
+                $this->user = $user;
+                $this->writable = true;
+                var_dump($user);
+                $cacheFN = getCacheName('__websockets_'. $user . $sessionid);
+
+                print_r('auth file exists: ' . file_exists($cacheFN) . "\n");
+                var_dump(file_get_contents($cacheFN));
+                var_dump($pass);
+                /*
+                $pass   = base64_decode($pass);
+                $secret = auth_cookiesalt(!$sticky, true); //bind non-sticky to session
+                $pass   = auth_decrypt($pass, $secret);
+                var_dump(auth_login($user, $pass, false, true));
+                print_r("$user $pass $sticky \n");
+                */
+            }
+        } else {
+            $this->user = 'WikiServer';
+        }
     }
 
 
@@ -58,5 +105,19 @@ class Connection {
      */
     public function getSocket() {
         return $this->socket;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getUser() {
+        return $this->user;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isWritable() {
+        return $this->writable;
     }
 }
