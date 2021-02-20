@@ -10,7 +10,7 @@ class Connection {
     protected $animal;
     protected $writable = false;
 
-    public function __construct($server, $socket) {
+    public function __construct(Server $server, $socket) {
         $this->server = $server;
         $this->socket = $socket;
     }
@@ -22,6 +22,12 @@ class Connection {
         }
         $this->performHandshake($data);
         $this->setUserData($data);
+        /** @var \helper_plugin_farmer $farmer */
+        $farmer = plugin_load('helper', 'farmer');
+        dbglog($farmer->getAllAnimals(), __METHOD__ .' '. __LINE__);
+        dbglog(DOKU_FARMDIR, __METHOD__ .' '. __LINE__);
+
+        print_r('client connected ' . $this->getSocket() . ": $this->user!\n");
     }
 
     protected function setUserData($header) {
@@ -38,7 +44,7 @@ class Connection {
             }, array());
 
             $sessionid = $cookies['DokuWiki'];
-            print_r('$sessionid: ' . $sessionid . "\n");
+//            print_r('$sessionid: ' . $sessionid . "\n");
             global $conf;
             $authCookieKey = 'DW'.md5($endpoint.(($conf['securecookie'])?80:''));
             if (isset($cookies[$authCookieKey])) {
@@ -47,19 +53,22 @@ class Connection {
                 $user   = base64_decode($user);
                 $this->user = $user;
                 $this->writable = true;
+
+                // animal handling has to be implemented before we can continue here
+                /*
                 var_dump($user);
                 $cacheFN = getCacheName('__websockets_'. $user . $sessionid);
 
                 print_r('auth file exists: ' . file_exists($cacheFN) . "\n");
                 var_dump(file_get_contents($cacheFN));
                 var_dump($pass);
-                /*
+
                 $pass   = base64_decode($pass);
                 $secret = auth_cookiesalt(!$sticky, true); //bind non-sticky to session
                 $pass   = auth_decrypt($pass, $secret);
-                var_dump(auth_login($user, $pass, false, true));
-                print_r("$user $pass $sticky \n");
+                var_dump(base64_encode($pass));
                 */
+
             }
         } else {
             $this->user = 'WikiServer';
@@ -79,7 +88,7 @@ class Connection {
         //try {
         $json = $utils->decodeDataFrame($buffer);
         $data = json_decode($json, true);
-        var_dump($data);
+//        var_dump($data);
         if (isset($data['secret']) && !empty($data['secret'])) {
             if ($utils->getSecret($data['timestamp']) === $data['secret']) {
                 // data from server -> send to all (web) clients
@@ -96,6 +105,8 @@ class Connection {
         // var_dump($e);
         //}
         // todo: do some user authentication
+
+
         trigger_event('WEBSOCKET_DATA_RECEIVED', $data); // json decode first!
 
     }

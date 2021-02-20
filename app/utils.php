@@ -31,7 +31,7 @@ class utils {
         $handshake .= "Sec-WebSocket-Version: 13\r\n";
 
         $secret = base64_encode(openssl_random_pseudo_bytes(16, $crypto_strong));
-        if (!$crypto_strong) {
+        if ($crypto_strong === false) {
             throw new \Exception('Your system is broken and does not support strong crypto algorithms!');
         }
         $handshake .= "Sec-WebSocket-Key: $secret" . "\r\n";
@@ -127,7 +127,7 @@ class utils {
             throw new \Exception('The reserve bits must be 0 !');
         }
         $opcode = bindec(substr($firstByteBinary, 4));
-        $frametype;
+        $frametype = null;
         switch ($opcode) {
         case 0:
             $frametype = 'continuation';

@@ -13,8 +13,8 @@ class helper_plugin_websockets_api extends DokuWiki_Plugin {
         }
         $utils = new utils();
         $handshake = $utils->createClientHandshake();
+        dbglog($handshake);
         fwrite($this->client, $handshake);
-        $this->sendDataToServer(array('foo'=>'bar'), 'test123');
     }
 
     public function sendDataToServer($data, $call) {
@@ -24,7 +24,7 @@ class helper_plugin_websockets_api extends DokuWiki_Plugin {
             'call' => $call,
             'data' => $data,
             'timestamp' => $timestamp,
-            'secret' => $utils->getSecret($timestamp, true)
+            'secret' => $utils->getSecret($timestamp, true) // FIXME change system to single-use secrets
         );
         $json = json_encode($payload);
         if ($json == false) {

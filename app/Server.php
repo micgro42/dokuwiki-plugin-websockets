@@ -8,6 +8,7 @@ class Server {
     protected $host;
     protected $port;
     protected $master;
+    /** @var Connection[]  */
     protected $clients = array();
 
     public function __construct($host, $port) {
@@ -36,22 +37,16 @@ class Server {
                     } else {
                         $allSockets[] = $client;
                         $this->clients[(int)$client] = new Connection($this, $client);
-                        echo 'client ' . $client . " Connected!\n";
-                        //$header = fread($client, 1024);
-                        //$handshake = $utils->getHandshakeResponse($header);
-                        //$bytesWritten = $this->writeBuffer($client, $handshake);
+//                        echo 'client ' . $client . " Connected!\n";
                     }
                 } else {
                     $buffer = fread($socket, 1024);
                     if (empty($buffer)) {
+                        /// @todo: implement client disconnect
+                        unset($this->clients[(int)$socket]);
                         continue;
                     }
                     $this->clients[(int)$socket]->handleData($buffer);
-
-                    //$encodedData = $utils->encodeDataFrame('{"msg":"testmessage2"}', 'text', false);
-                    //if (!$this->writeBuffer($socket, $encodedData)) {
-                    //    throw new \Exception('write to socket failed!');
-                    //}
                 }
             }
         }
@@ -73,7 +68,7 @@ class Server {
             $bytesWritten = $this->writeBuffer($connection->getSocket(), $payload);
             if (!$bytesWritten) {
                 $user = $connection->getUser();
-                print_r("$user: failed to write: \n$string\n");
+                print_r("$user: failed to write: \n$payload\n");
             }
         }
     }

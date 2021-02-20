@@ -19,8 +19,6 @@ class action_plugin_websockets_auth extends DokuWiki_Action_Plugin {
      */
     public function register(Doku_Event_Handler $controller) {
         $controller->register_hook('AUTH_LOGIN_CHECK', 'AFTER', $this, 'handle_auth_login_check');
-//        $controller->register_hook('AUTH_USER_CHANGE', 'AFTER', $this, 'handle_auth_user_change');
-//        $controller->register_hook('ACTION_ACT_PREPROCESS', 'AFTER', $this, 'handle_logout');
     }
 
     /**
